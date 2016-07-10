@@ -1,0 +1,56 @@
+{
+  "name": "skypager-process-runner",
+  "version": "4.0.0",
+  "description": "run processes and stream their output as colorized html",
+  "repository": {
+    "type": "git",
+    "url": "git://deploy@app-1.skypager.io:skypager/skypager-webapp.git"
+  },
+  "engines": {
+    "npm": ">=3"
+  },
+  "skypager": {
+    "helpersRoot": "src/helpers"
+  },
+  "author": "Jon Soeder <jon@chicago.com>",
+  "license": "UNLICENSED",
+  "babel": {
+    "presets": [
+      "skypager"
+    ]
+  },
+  "eslintConfig": {
+    "parser": "babel-eslint",
+    "extends": [
+      "skypager"
+    ],
+    "env": {
+      "browser": true,
+      "node": true,
+      "mocha": true
+    }
+  },
+  "dependencies": {
+    "ansi-html-stream": "0.0.3",
+    "bluebird": "^3.4.1",
+    "child-process-promise": "^2.0.3",
+    "lodash": "^4.13.1"
+  },
+  "devDependencies": {
+    "babel-core": "^6.7.7",
+    "babel-eslint": "^6.0.4",
+    "babel-loader": "^6.2.4",
+    "babel-preset-skypager": "^2.58.0",
+    "babel-register": "^6.7.0",
+    "chai": "^3.5.0",
+    "eslint": "^2.10.1",
+    "eslint-config-skypager": "^2.59.0",
+    "eslint-plugin-import": "^1.8.1",
+    "eslint-plugin-react": "^5.1.1",
+    "json-loader": "^0.5.4",
+    "mocha": "^2.4.5",
+    "pre-commit": "^1.1.3",
+    "sinon": "^2.0.0-pre",
+    "webpack": "^2.1.0-beta.15"
+  }
+}
