@@ -2,6 +2,7 @@
   "name": "skypager-process-runner",
   "version": "4.0.0",
   "description": "run processes and stream their output as colorized html",
+  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git://deploy@app-1.skypager.io:skypager/skypager-webapp.git"

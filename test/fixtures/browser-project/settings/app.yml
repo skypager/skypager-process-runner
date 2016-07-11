@@ -1,4 +1,0 @@
-name: MyApp
-server:
-  host: localhost
-  port: 3000

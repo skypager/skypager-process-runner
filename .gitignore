@@ -17,3 +17,4 @@ repositories/features
 repositories/packages/skypager-*/lib
 .tmp
 lib/
+tmp/*

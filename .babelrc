@@ -1,4 +1,4 @@
 {
   "presets": [ "skypager" ],
-  "only":["src"]
+  "only":["src","test"]
 }
