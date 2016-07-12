@@ -1,6 +1,5 @@
-import defaults from 'lodash/defaults'
 import ansi from 'ansi-html-stream'
-import { spawn, exec } from 'child-process-promise'
+import { spawn } from 'child-process-promise'
 import { defineHiddenProperty } from './utils/props'
 import { createWriteStream } from 'fs'
 import { join } from 'path'
@@ -14,6 +13,8 @@ export class ProcessRunner {
    * @param {object} options - the options hash, passed directly to spawn
    * @param {boolean} options.chunked - the resulting html chunks should be contained in its own closing tag
    * @param {string} options.group - the name of the process group, useful to help group output logs
+   * @param {string} options.prefix - the prefix for the id, which is used in the output filename
+   * @param {stream} options.outputStream - if you don't want to use a file, pass in your own writeable stream
    */
   constructor (command, options = {}) {
     this.processGroup = options.group || options.processGroup || 'processes'
@@ -25,13 +26,14 @@ export class ProcessRunner {
 
     this.command = typeof command === 'function'
       ? command.bind(this)
-      : ((...args) => command)
+      : (() => command)
 
+    hide('prefix', options.prefix || `${this.processGroup}-${Math.floor(Date.now() / 100)}`)
     hide('errors', [])
     hide('outputFolder', options.outputFolder || '.')
     hide('args', [command, options])
-    hide('ansi', ansi({chunked: options.chunked !== false}))
-    hide('outputStream', (() => createWriteStream(this.outputPath)), true)
+    hide('ansi', ansi({chunked: options.chunked !== false && !process.env.DISABLE_ANSI_HTML_CHUNKING}))
+    hide('outputStream', (() => options.outputStream || createWriteStream(this.outputPath)), true)
     hide('running', {})
   }
 
@@ -40,7 +42,7 @@ export class ProcessRunner {
   }
 
   get id() {
-    return `${this.processGroup}-${Math.floor(Date.now() / 100)}-${this.counter}`
+    return `${this.prefix}-${this.counter}`
   }
 
   get errorCount() {
@@ -65,6 +67,8 @@ export class ProcessRunner {
     return runProcessAsync(cmd, {
       cwd: this.cwd,
       outputPath,
+      outputStream: this.outputStream,
+      id: this.id,
       onExit: (code) => {
         state.exitCode = code
 
@@ -101,7 +105,12 @@ export class ProcessRunner {
   run(commandArgs) {
     const cmd = this.command(commandArgs)
     const outputPath = this.outputPath
-    const runner = runProcess(cmd, {cwd: this.cwd, outputPath})
+    const runner = runProcess(cmd, {
+      cwd: this.cwd,
+      outputPath,
+      outputStream: this.outputStream,
+      id: this.id,
+    })
 
     this.counter += 1
     return runner
@@ -133,7 +142,7 @@ export function runProcessAsync(command, options = {}) {
   const outputPath = options.outputPath || `${ child.pid }.html`
 
   var stream = ansi({ chunked: options.chunked !== false })
-    , file = fs.createWriteStream(outputPath, 'utf8')
+    , file = options.outputStream || fs.createWriteStream(outputPath, 'utf8')
 
   child.stdout.pipe(stream)
   child.stderr.pipe(stream)
@@ -174,7 +183,7 @@ export function runProcess(command, options = {}) {
   const runner = spawn(cmd, args)
   const child = runner.childProcess
   const outputPath = options.outputPath || `${ child.pid }.html`
-  const output = createWriteStream(outputPath, 'utf8')
+  const output = options.outputStream || createWriteStream(outputPath, 'utf8')
 
   child.stdout.pipe(stream)
   child.stderr.pipe(stream)
@@ -195,8 +204,10 @@ export function runProcess(command, options = {}) {
     pid: child.pid,
     code: result.code,
     outputPath,
+    id: options.id,
     getProcess: (() => child),
-    getRunner: (() => runner)
+    getRunner: (() => runner),
+    getOutputStream: (() => output),
   }))
 }
 
