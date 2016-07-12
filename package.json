@@ -1,6 +1,6 @@
 {
   "name": "skypager-process-runner",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "run processes and stream their output as colorized html",
   "main": "index.js",
   "repository": {
