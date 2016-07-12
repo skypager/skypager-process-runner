@@ -69,6 +69,7 @@ export class ProcessRunner {
       outputPath,
       outputStream: this.outputStream,
       id: this.id,
+      cmd,
       onExit: (code) => {
         state.exitCode = code
 
