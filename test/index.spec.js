@@ -4,7 +4,7 @@ import { readFile, exists } from 'fs'
 describe('The Process Runner', function() {
   before(function() {
     this.runner = new ProcessRunner(
-      ((uniqueParam) => `touch tmp/${ uniqueParam }.log`),
+      ((uniqueParam) => `echo ${ uniqueParam }`),
       { outputFolder: 'tmp' }
     )
   })
@@ -19,13 +19,13 @@ describe('The Process Runner', function() {
   })
 
   it('tracks process state for long running processes', function(done) {
-    const monitor = new ProcessRunner('sleep 4', {
+    const monitor = new ProcessRunner(`node ${__dirname}/../test.js --color=always`, {
       outputFolder: 'tmp',
       group: 'watcher',
       id: 'shit'
     })
 
-    monitor.runAsync((result, data) => {
+    monitor.runAsync(() => {
       done()
     })
     .then((result) => {
@@ -33,7 +33,7 @@ describe('The Process Runner', function() {
       monitor.running.should.not.be.empty
       setTimeout(() => {
         process.kill(result.pid)
-      }, 1000)
+      }, 1500)
     })
     .catch((error) => [console.log('error', error), done('fuck')])
   })

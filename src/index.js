@@ -1,8 +1,9 @@
 import ansi from 'ansi-html-stream'
-import { spawn } from 'child-process-promise'
 import { defineHiddenProperty } from './utils/props'
 import { createWriteStream } from 'fs'
 import { join } from 'path'
+import { spawn } from 'pty.js'
+import Promise from 'child-process-promise/lib/ChildProcessPromise'
 
 export class ProcessRunner {
   /**
@@ -32,7 +33,7 @@ export class ProcessRunner {
     hide('errors', [])
     hide('outputFolder', options.outputFolder || '.')
     hide('args', [command, options])
-    hide('ansi', ansi({chunked: options.chunked !== false && !process.env.DISABLE_ANSI_HTML_CHUNKING}))
+    hide('ansi', ansi({chunked: true}))
     hide('outputStream', (() => options.outputStream || createWriteStream(this.outputPath)), true)
     hide('running', {})
   }
@@ -131,22 +132,21 @@ export default ProcessRunner
 export function runProcessAsync(command, options = {}) {
   const [cmd, ...args] = command.split(' ')
 
-  const spawn = require('child_process').spawn
-    , ansi = require('ansi-html-stream')
-    , fs = require('fs')
-
   const child = spawn(cmd, args, {
     cwd: process.cwd(),
+    rows: 60,
+    cols: 160,
+    name: options.id,
     ...options
   })
 
   const outputPath = options.outputPath || `${ child.pid }.html`
 
-  var stream = ansi({ chunked: options.chunked !== false })
-    , file = options.outputStream || fs.createWriteStream(outputPath, 'utf8')
+  var stream = ansi({ chunked: true})
+    , file = options.outputStream || createWriteStream(outputPath, 'utf8')
 
   child.stdout.pipe(stream)
-  child.stderr.pipe(stream)
+  //child.stderr.pipe(stream)
 
   stream.pipe(file, { end: false })
 
@@ -181,13 +181,19 @@ export function runProcess(command, options = {}) {
   const [cmd, ...args] = command.split(' ')
 
   const stream = ansi({chunked: true})
-  const runner = spawn(cmd, args)
+  const runner = doSpawn(cmd, args, {
+    cols: 160,
+    rows: 80,
+    name: options.id,
+    cwd: options.cwd || process.cwd(),
+    env: options.env || process.env
+  })
   const child = runner.childProcess
   const outputPath = options.outputPath || `${ child.pid }.html`
   const output = options.outputStream || createWriteStream(outputPath, 'utf8')
 
   child.stdout.pipe(stream)
-  child.stderr.pipe(stream)
+  //child.stderr.pipe(stream)
 
   stream.pipe(output, {end: false})
   stream.once('end', () => output.end('</pre>\n'))
@@ -218,4 +224,101 @@ export default ProcessRunner
  */
 export function create(command, options) {
   return new ProcessRunner(command, options)
+}
+
+
+/**
+ * `spawn` as Promised
+ *
+ * @param {String} command
+ * @param {Array} args
+ * @param {Object} options
+ * @return {Promise}
+ */
+function doSpawn(command, args, options) {
+    var result = {};
+
+    var cp;
+    var cpPromise = new Promise();
+    var reject = cpPromise._cpReject;
+    var resolve = cpPromise._cpResolve;
+
+    // not sure why some of the things im testing have undefined exit codes instead of 0
+    var successfulExitCodes = (options && options.successfulExitCodes) || [0, null, undefined];
+
+    cp = spawn(command, args, {
+      ...options,
+      shell: true
+    });
+
+    // Don't return the whole Buffered result by default.
+    var captureStdout = false;
+
+    var capture = options && options.capture;
+    if (capture) {
+        for (var i = 0, len = capture.length; i < len; i++) {
+            var cur = capture[i];
+            if (cur === 'stdout') {
+                captureStdout = true;
+            } else if (cur === 'stderr') {
+                captureStderr = true;
+            }
+        }
+    }
+
+    result.childProcess = cp;
+
+    if (captureStdout) {
+        result.stdout = '';
+
+        cp.stdout.on('data', function (data) {
+            result.stdout += data;
+        });
+    }
+
+    /*
+    if (captureStderr) {
+        result.stderr = '';
+
+        cp.stderr.on('data', function (data) {
+            result.stderr += data;
+        });
+    }
+    */
+
+    cp.on('error', reject);
+
+    cp.on('close', function (code) {
+        if (successfulExitCodes.indexOf(code) === -1) {
+            var commandStr = command + (args.length ? (' ' + args.join(' ')) : '');
+            var err = {
+                code: code,
+                message: '`' + commandStr + '` failed with code ' + code,
+                childProcess: cp,
+                toString() {
+                    return this.message;
+                }
+            };
+
+            /*
+            if (captureStderr) {
+                err.stderr = result.stderr.toString();
+            }
+            */
+
+            if (captureStdout) {
+                err.stdout = result.stdout.toString();
+            }
+
+            reject(err);
+        }
+        else {
+            result.code = code;
+            resolve(result);
+        }
+    });
+
+    cpPromise.childProcess = cp;
+
+    return cpPromise;
 }
