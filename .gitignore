@@ -1,20 +1,8 @@
 # Don't check auto-generated stuff into git
-coverage
-build
 node_modules
-stats.json
-# Cruft
 .DS_Store
 npm-debug.log
-.idea
-*.bundle.json
 log/*.*
 .env
-*.sqlite
-repositories/foundations
-repositories/portfolios
-repositories/features
-repositories/packages/skypager-*/lib
-.tmp
 lib/
 tmp/*
